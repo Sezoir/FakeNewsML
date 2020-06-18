@@ -1,0 +1,1 @@
+A simply project testing various ML libaries on whether a given news is fake.
