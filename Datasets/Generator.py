@@ -6,7 +6,6 @@ from pathlib import Path
 import math
 
 class Generator:
-
     # Initilise the class
     #   @ filePaths: Array of the file paths to each table you want to open
     def __init__(self, filePaths):
