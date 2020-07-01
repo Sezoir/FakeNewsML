@@ -34,7 +34,7 @@ def main():
     ml = TensorFlow(pathtraining, pathValidation, pathTesting)
     # @todo: Below functions
     ml.loadModel()
-    # ml.fitModel()
+    ml.fitModel()
     # ml.saveModel()
     # ml.evaluate()
     # ml.predict()
