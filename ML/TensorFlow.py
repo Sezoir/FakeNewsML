@@ -117,19 +117,28 @@ class TensorFlow:
         self.mModel.save("ML/Tensorflow.h5")
         return
 
+    # Makes a single prediction
     def predict(self, title, text):
+        # Check model exists
         if self.mModel is None:
             raise ValueError("Model has not been loaded, so there is nothing to predict with")
+        # Embed the strings
         title = self.textToIndex(title, self.mToken)
         text = self.textToIndex(text, self.mToken)
+        # Combine strings into an array
         combine = np.array([[title], [text]], dtype=int)
+        # Make a prediction
         predictions = self.mModel.predict([combine[0], combine[1]])
+        # Get the scalar value out of the prediction
         prediction = predictions[0][0]
+        # Prediction ranges between 0-1, so we use 0.5 as the middle interval
         if prediction > 0.5:
-            conf = round((prediction - 0.5)/0.5, 2)
+            # Calculate the confidence of the prediction
+            conf = round(100*((prediction - 0.5)/0.5), 2)
             print(f"I am {conf}% confident that the news is true!")
         else:
-            conf = round((0.5 - prediction) / 0.5, 2)
+            # Calculate the confidence of the prediction
+            conf = round(100*((0.5 - prediction)/0.5), 2)
             print(f"I am {conf}% confident that the news is false!")
         return
 
