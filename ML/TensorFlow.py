@@ -24,11 +24,6 @@ class TensorFlow:
         # Load datasets
         self.loadDatasets()
 
-        # self.mModel = ks.Sequential([
-        #     lr.Embedding(VOCAB_SIZE, 32),
-        #     lr.LSTM(32),
-        #     lr.Dense(1, activation="sigmoid")
-        # ])
         return
 
     def loadDatasets(self):
@@ -40,15 +35,22 @@ class TensorFlow:
         return
 
     def loadModel(self):
+        # Check for existence of saved model, and if so load the model
         if exists(Path("Tensorflow.h5")):
             self.mModel = ks.models.load_model("Tensorflow.h5")
             return
 
-        self.mModel = ks.Sequential([
-            lr.Embedding(65000, 32, input_length=200),#len(self.mToken.word_index)+1 #@todo: isnt giving the correct length
-            lr.LSTM(32),
-            lr.Dense(1, activation="sigmoid")
-        ])
+        # We want to evaluate 2 columns; the title and text columns. So we have 2 inputs for each column
+        input1 = lr.Input(shape=(200,))
+        input2 = lr.Input(shape=(200,))
+        # Combine the columns
+        merged = lr.Concatenate(axis=1)([input1, input2])
+        # Embed the encoded text (helps the lstm)
+        embedding = lr.Embedding(len(self.mToken.word_index)+1, 32, input_length=200)(merged)
+        lstm = lr.LSTM(32)(embedding)
+        output = lr.Dense(1, activation="sigmoid")(lstm)
+        # Create the functional model
+        self.mModel = ks.Model(inputs=[input1, input2], outputs=output)
 
         self.mModel.summary()
 
@@ -59,24 +61,27 @@ class TensorFlow:
         return
 
     def fitModel(self):
-        history = self.mModel.fit(self.mTrainingData, self.mTrainingLabels, epochs=10, validation_split=0.2)
+        history = self.mModel.fit([self.mTrainingData[0], self.mTrainingData[1]], self.mTrainingLabels, epochs=10, validation_split=0.2)
         return
 
     def createWordIndex(self):
+        # Create tokenizer and create a "bag of words" like index
         token = prp.text.Tokenizer()
-        token.fit_on_texts(self.mTrainingData[0] + self.mTrainingData[1]) # @todo: doesnt seem to fit all the words
+        token.fit_on_texts(self.mTrainingData.T[0] + self.mTrainingData.T[1])
 
+        # Takes a string and returns a list of padded integers representing the encoded string
         def textToIndex(text):
             tokens = [token.word_index[word] if word in token.word_index else 0 for word in prp.text.text_to_word_sequence(text)]
-            return prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1)
+            return list(prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1))
 
-        x = []
-        for arrayInd in range(len(self.mTrainingData)):
-            self.mTrainingData[arrayInd][0] = textToIndex(self.mTrainingData[arrayInd][0])
-            self.mTrainingData[arrayInd][1] = textToIndex(self.mTrainingData[arrayInd][1])
-            x.append(self.mTrainingData[arrayInd][0]+self.mTrainingData[arrayInd][1])
-        self.mTrainingData = x
-        self.mTrainingData = np.asarray(self.mTrainingData, np.float32)
+        # Create temporary list
+        temp = []
+        # Iterate through transposed training data and encode each string as list of integers
+        for rowInd in range(len(self.mTrainingData.T)):
+            temp.append([textToIndex(x) for x in self.mTrainingData.T[rowInd]])
+        # Create new numpy array with encoded strings
+        self.mTrainingData = np.array(temp, dtype=np.int)
+        # Make sure to save token for later use
         self.mToken = token
         return
 
