@@ -60,25 +60,25 @@ class TensorFlow:
         self.mToken = token
         return
 
-    def encodeTable(self, table, token):
-        # Takes a string and returns a list of padded integers representing the encoded string
-        def textToIndex(text):
-            tokens = [token.word_index[word] if word in token.word_index else 0 for word in
-                      prp.text.text_to_word_sequence(text)]
-            return list(prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1))
+    # Takes a string and returns a list of padded integers representing the encoded string
+    def textToIndex(self, text, token):
+        tokens = [token.word_index[word] if word in token.word_index else 0 for word in
+                  prp.text.text_to_word_sequence(text)]
+        return list(prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1))
 
+    def encodeTable(self, table, token):
         # Create temporary list
         temp = []
         # Iterate through transposed training data and encode each string as list of integers
         for rowInd in range(len(table)):
-            temp.append([textToIndex(x) for x in table[rowInd]])
+            temp.append([self.textToIndex(x, token) for x in table[rowInd]])
         # Create new numpy array with encoded strings
         return np.array(temp, dtype=np.int)
 
     def loadModel(self):
         # Check for existence of saved model, and if so load the model
-        if exists(Path("Tensorflow.h5")):
-            self.mModel = ks.models.load_model("Tensorflow.h5")
+        if exists(Path("ML/Tensorflow.h5")):
+            self.mModel = ks.models.load_model("Ml/Tensorflow.h5")
             return
 
         # We want to evaluate 2 columns; the title and text columns. So we have 2 inputs for each column
@@ -114,7 +114,23 @@ class TensorFlow:
     def saveModel(self):
         if self.mModel is None:
             raise ValueError("Model has not been loaded, so there is nothing to save")
-        self.mModel.save("Tensorflow.h5")
+        self.mModel.save("ML/Tensorflow.h5")
+        return
+
+    def predict(self, title, text):
+        if self.mModel is None:
+            raise ValueError("Model has not been loaded, so there is nothing to predict with")
+        title = self.textToIndex(title, self.mToken)
+        text = self.textToIndex(text, self.mToken)
+        combine = np.array([[title], [text]], dtype=int)
+        predictions = self.mModel.predict([combine[0], combine[1]])
+        prediction = predictions[0][0]
+        if prediction > 0.5:
+            conf = round((prediction - 0.5)/0.5, 2)
+            print(f"I am {conf}% confident that the news is true!")
+        else:
+            conf = round((0.5 - prediction) / 0.5, 2)
+            print(f"I am {conf}% confident that the news is false!")
         return
 
 
