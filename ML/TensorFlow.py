@@ -111,6 +111,11 @@ class TensorFlow:
         print(results)
         return
 
+    def saveModel(self):
+        if self.mModel is None:
+            raise ValueError("Model has not been loaded, so there is nothing to save")
+        self.mModel.save("Tensorflow.h5")
+        return
 
 
     mTrainingPath = None

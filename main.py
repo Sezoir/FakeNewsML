@@ -36,7 +36,7 @@ def main():
     # @todo: Below functions
     ml.loadModel()
     ml.fitModel()
-    # ml.saveModel()
+    ml.saveModel()
     ml.evaluate()
     # ml.predict()
 
