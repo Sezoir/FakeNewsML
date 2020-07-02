@@ -27,7 +27,7 @@ class TensorFlow:
         return
 
     def loadDatasets(self):
-        self.mTrainingData = pd.read_csv(self.mTrainingPath, usecols=['title', 'text'], encoding='utf8').to_numpy(dtype=None)
+        self.mTrainingData = pd.read_csv(self.mTrainingPath, usecols=['title', 'text'], encoding='utf8').to_numpy(dtype=None).T
         self.mTrainingLabels = pd.read_csv(self.mTrainingPath, usecols=['label'], encoding='utf8').to_numpy(dtype=None)
         self.createWordIndex()
 
@@ -67,7 +67,7 @@ class TensorFlow:
     def createWordIndex(self):
         # Create tokenizer and create a "bag of words" like index
         token = prp.text.Tokenizer()
-        token.fit_on_texts(self.mTrainingData.T[0] + self.mTrainingData.T[1])
+        token.fit_on_texts(self.mTrainingData[0] + self.mTrainingData[1])
 
         # Takes a string and returns a list of padded integers representing the encoded string
         def textToIndex(text):
@@ -77,8 +77,8 @@ class TensorFlow:
         # Create temporary list
         temp = []
         # Iterate through transposed training data and encode each string as list of integers
-        for rowInd in range(len(self.mTrainingData.T)):
-            temp.append([textToIndex(x) for x in self.mTrainingData.T[rowInd]])
+        for rowInd in range(len(self.mTrainingData)):
+            temp.append([textToIndex(x) for x in self.mTrainingData[rowInd]])
         # Create new numpy array with encoded strings
         self.mTrainingData = np.array(temp, dtype=np.int)
         # Make sure to save token for later use
