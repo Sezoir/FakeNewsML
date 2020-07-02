@@ -30,13 +30,14 @@ def main():
         generator.mTables["Fake"]["label"] = 0
         generator.combineTables(shuffle=True)
         generator.exportCTable(path=pathPre, split=(0.8, 0.9, 1))
-    pathtraining = Path("C:\Projects\FakeNewsML\Datasets\Training.csv")
-    ml = TensorFlow(pathtraining, pathValidation, pathTesting)
+
+    # pathtraining = Path("C:\Projects\FakeNewsML\Datasets\Training.csv")
+    ml = TensorFlow(pathTraining, pathValidation, pathTesting)
     # @todo: Below functions
     ml.loadModel()
     ml.fitModel()
     # ml.saveModel()
-    # ml.evaluate()
+    ml.evaluate()
     # ml.predict()
 
 

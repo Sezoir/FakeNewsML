@@ -24,15 +24,56 @@ class TensorFlow:
         # Load datasets
         self.loadDatasets()
 
+        # Create word index for encoding strings
+        self.createWordIndex()
+
+        # Encode the strings
+        self.mTrainingData = self.encodeTable(self.mTrainingData, self.mToken)
+        self.mValidationData = self.encodeTable(self.mValidationData, self.mToken)
+        self.mTestingData = self.encodeTable(self.mTestingData, self.mToken)
+
         return
 
     def loadDatasets(self):
-        self.mTrainingData = pd.read_csv(self.mTrainingPath, usecols=['title', 'text'], encoding='utf8').to_numpy(dtype=None).T
-        self.mTrainingLabels = pd.read_csv(self.mTrainingPath, usecols=['label'], encoding='utf8').to_numpy(dtype=None)
-        self.createWordIndex()
-
-
+        # Get the training set
+        self.mTrainingData = pd.read_csv(self.mTrainingPath, usecols=['title', 'text'],
+                                         encoding='utf8').to_numpy(dtype=None).T
+        self.mTrainingLabels = pd.read_csv(self.mTrainingPath, usecols=['label'],
+                                           encoding='utf8').to_numpy(dtype=None)
+        # Get the validation set
+        self.mValidationData = pd.read_csv(self.mValidationPath, usecols=['title', 'text'],
+                                         encoding='utf8').to_numpy(dtype=None).T
+        self.mValidationLabels = pd.read_csv(self.mValidationPath, usecols=['label'],
+                                           encoding='utf8').to_numpy(dtype=None)
+        # Get the testing set
+        self.mTestingData = pd.read_csv(self.mTestingPath, usecols=['title', 'text'],
+                                         encoding='utf8').to_numpy(dtype=None).T
+        self.mTestingLabels = pd.read_csv(self.mTestingPath, usecols=['label'],
+                                           encoding='utf8').to_numpy(dtype=None)
         return
+
+    def createWordIndex(self):
+        # Create tokenizer and create a "bag of words" like index
+        token = prp.text.Tokenizer()
+        token.fit_on_texts(self.mTrainingData[0] + self.mTrainingData[1])
+        # Make sure to save token for later use
+        self.mToken = token
+        return
+
+    def encodeTable(self, table, token):
+        # Takes a string and returns a list of padded integers representing the encoded string
+        def textToIndex(text):
+            tokens = [token.word_index[word] if word in token.word_index else 0 for word in
+                      prp.text.text_to_word_sequence(text)]
+            return list(prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1))
+
+        # Create temporary list
+        temp = []
+        # Iterate through transposed training data and encode each string as list of integers
+        for rowInd in range(len(table)):
+            temp.append([textToIndex(x) for x in table[rowInd]])
+        # Create new numpy array with encoded strings
+        return np.array(temp, dtype=np.int)
 
     def loadModel(self):
         # Check for existence of saved model, and if so load the model
@@ -46,8 +87,8 @@ class TensorFlow:
         # Combine the columns
         merged = lr.Concatenate(axis=1)([input1, input2])
         # Embed the encoded text (helps the lstm)
-        embedding = lr.Embedding(len(self.mToken.word_index)+1, 32, input_length=200)(merged)
-        lstm = lr.LSTM(32)(embedding)
+        embedding = lr.Embedding(len(self.mToken.word_index)+1, 64, input_length=200)(merged)
+        lstm = lr.LSTM(64)(embedding)
         output = lr.Dense(1, activation="sigmoid")(lstm)
         # Create the functional model
         self.mModel = ks.Model(inputs=[input1, input2], outputs=output)
@@ -57,33 +98,20 @@ class TensorFlow:
         print(self.mModel.input_shape)
 
         self.mModel.compile(loss="binary_crossentropy", optimizer="rmsprop", metrics=['acc'])
-
         return
 
     def fitModel(self):
-        history = self.mModel.fit([self.mTrainingData[0], self.mTrainingData[1]], self.mTrainingLabels, epochs=10, validation_split=0.2)
+        history = self.mModel.fit([self.mTrainingData[0], self.mTrainingData[1]], self.mTrainingLabels, epochs=3,
+                                  batch_size=64, shuffle=True,
+                                  validation_data=([self.mValidationData[0], self.mValidationData[1]], self.mValidationLabels))
         return
 
-    def createWordIndex(self):
-        # Create tokenizer and create a "bag of words" like index
-        token = prp.text.Tokenizer()
-        token.fit_on_texts(self.mTrainingData[0] + self.mTrainingData[1])
-
-        # Takes a string and returns a list of padded integers representing the encoded string
-        def textToIndex(text):
-            tokens = [token.word_index[word] if word in token.word_index else 0 for word in prp.text.text_to_word_sequence(text)]
-            return list(prp.sequence.pad_sequences([tokens], 200)[0].reshape(-1))
-
-        # Create temporary list
-        temp = []
-        # Iterate through transposed training data and encode each string as list of integers
-        for rowInd in range(len(self.mTrainingData)):
-            temp.append([textToIndex(x) for x in self.mTrainingData[rowInd]])
-        # Create new numpy array with encoded strings
-        self.mTrainingData = np.array(temp, dtype=np.int)
-        # Make sure to save token for later use
-        self.mToken = token
+    def evaluate(self):
+        results = self.mModel.evaluate([self.mTestingData[0], self.mTestingData[1]], self.mTestingLabels)
+        print(results)
         return
+
+
 
     mTrainingPath = None
     mValidationPath = None
